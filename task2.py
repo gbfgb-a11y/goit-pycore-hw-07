@@ -203,7 +203,7 @@ Avalible commands:
 def show_patterns():
     return '''--------------------
     add > 'add name phone'
-    change > 'change old_phone new_phone'
+    change > 'change name old_phone new_phone'
     phone > 'phone name'
     all > 'all'
     add-birthday > 'add-birthday name date'
@@ -252,3 +252,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
