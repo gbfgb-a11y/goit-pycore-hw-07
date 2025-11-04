@@ -28,7 +28,8 @@ class Phone(Field):
 class Birthday(Field):
     def __init__(self, value):
         try:
-            self.dateb = datetime.strptime(value, '%d.%m.%Y').date()
+            self.value = datetime.strptime(value, '%d.%m.%Y').date()
+            
         except ValueError:
             raise ValueError("Invalid date format. Use DD.MM.YYYY")
 
@@ -81,13 +82,15 @@ class Record:
     
 
     def __str__(self):
-        return f"Contact name: {self.name}, phones: {'; '.join(str(p) for p in self.phones)}"
+        return f"Contact name: {self.name}, phones: {'; '.join(str(p) for p in self.phones)}, birthday_date: {self.birthday}"
 
 
 class AddressBook(UserDict):
 
     def add_record(self, record):
         self.data[record.name.value] = record
+        #self.data[record.name] = record
+        self.get_upcoming_birthdays()
         print(self.data)
 
     def find(self, name):
@@ -97,13 +100,13 @@ class AddressBook(UserDict):
     def delete(self, name):
         if name in self.data:
             del self.data[name]
-    @property
+
     def get_upcoming_birthdays(self):
         today = datetime.today().date()
         upcoming_birthdays = []
         for name, record in self.data.items():
             if isinstance(record.birthday, Birthday):
-                birthday_this_year = record.birthday.dateb.replace(year=today.year)
+                birthday_this_year = record.birthday.value.replace(year=today.year)
                 if birthday_this_year < today:
                     birthday_this_year = birthday_this_year.replace(year=today.year + 1)
 
@@ -114,10 +117,26 @@ class AddressBook(UserDict):
                         congratulation_date += timedelta(days=2)
                     elif congratulation_date.weekday() == 6:    # воскресенье
                         congratulation_date += timedelta(days=1)
-
+                    bw1 = congratulation_date.weekday()
+                    bw0 = ''
+                    if bw1 == 1:
+                        bw0 = 'Monday'
+                    if bw1 == 2:
+                        bw0 = 'Tuesday'
+                    if bw1 == 3:
+                        bw0 == 'Wednesday'
+                    if bw1 == 4:
+                        bw0 = 'Thursday'
+                    if bw1 == 5:
+                        bw0 = 'Friday'
+                    if bw1 == 6:
+                        bw0 = 'Saturday'
+                    if bw1 == 7:
+                        bw0 = 'Sunday'
                     upcoming_birthdays.append({
                         "name": name,
-                        "congratulation_date": congratulation_date.strftime("%Y.%m.%d")
+                        "congratulation_date": congratulation_date.strftime("%Y.%m.%d"),
+                        "weekday": bw0
                     })
         return upcoming_birthdays
 
@@ -131,26 +150,4 @@ john_record.add_phone("5555555555")
 john_record.add_birthday('20.11.2025')
 # Додавання запису John до адресної книги
 book.add_record(john_record)
-
-# Створення та додавання нового запису для Jane
-jane_record = Record("Jane")
-jane_record.add_phone("9876543210")
-jane_record.add_birthday('04.11.2025')
-book.add_record(jane_record)
-
-# Виведення всіх записів у книзі
-for value in book.data.items():
-    print(value)
-
-# Знаходження та редагування телефону для John
-john = book.find("John")
-john.edit_phone("1234567890", "1112223333")
-
-print(john)  # Виведення: Contact name: John, phones: 1112223333; 5555555555
-
-# Пошук конкретного телефону у записі John
-found_phone = john.find_phone("5555555555")
-print(f"{john.name}: {found_phone}")  # Виведення: 5555555555
-print(book.get_upcoming_birthdays)
-# Видалення запису Jane
-book.delete("Jane")
+print(book.find('John'))
