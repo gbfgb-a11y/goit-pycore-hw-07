@@ -58,7 +58,22 @@ class AddressBook(UserDict):
     def delete(self, name):
         if name in self.data:
             del self.data[name]
-
+    @staticmethod
+    def witch_weekday(numberofweekday):
+        if numberofweekday == 1:
+            return 'Monday'
+        if numberofweekday == 2:
+            return 'Tuesday'
+        if numberofweekday == 3:
+            return 'Wednesday'
+        if numberofweekday == 4:
+            return 'Thursday'
+        if numberofweekday == 5:
+            return 'Friday'
+        if numberofweekday == 6:
+            return 'Saturday'
+        if numberofweekday == 7:
+            return 'Sunday'
     def get_upcoming_birthdays(self):
         today = datetime.today().date()
         upcoming = []
@@ -74,9 +89,12 @@ class AddressBook(UserDict):
                         congrat_date += timedelta(days=2)
                     elif congrat_date.weekday() == 6:
                         congrat_date += timedelta(days=1)
+                    weekday1 = congrat_date.weekday()
+                    wd0 = self.witch_weekday(weekday1+1)
                     upcoming.append({
                         "name": record.name.value,
-                        "congratulation_date": congrat_date.strftime("%Y-%m-%d")
+                        "congratulation_date": congrat_date.strftime("%Y-%m-%d"),
+                        "weekday": wd0
                     })
         return upcoming
 
@@ -163,15 +181,41 @@ def birthdays(_, book):
     upcoming = book.get_upcoming_birthdays()
     if not upcoming:
         return "No birthdays in the next 7 days."
-    lines = [f"{b['name']}: {b['congratulation_date']}" for b in upcoming]
+    lines = [f"{b['name']}: {b['congratulation_date']}, weekday: {b['weekday']}" for b in upcoming]
     return "\n".join(lines)
 
+def get_help():
+    return '''--------------------
+Avalible commands: 
+* help > to call this list.
+* hello > greetings.
+* add > to add phone to any contact or create a brandnew contact.
+* change > to change phone to any contact.
+* phone > to find contact name by phone numbers.
+* all > show whole list of contacts and phones
+* add-birthday > to add birthday date to any contact.
+* show-birthday > to find birthday by given contact
+* birthdays > to show all list of birthdays and combined names.
+* close/exit > to close the programm. 
+* patterns > shows the way how to call any command.
+--------------------'''
 
+def show_patterns():
+    return '''--------------------
+    add > 'add name phone'
+    change > 'change old_phone new_phone'
+    phone > 'phone name'
+    all > 'all'
+    add-birthday > 'add-birthday name date'
+    show-birthday > 'show-birthday name'
+    birthdays > 'birthdays'
+    close/exit > 'close'/'exit'
+--------------------    '''
 # Головна частина
 
 def main():
     book = AddressBook()
-    print("Welcome to the assistant bot!")
+    print("Welcome to the assistant bot! type command help to see avalible commands.")
 
     while True:
         user_input = input("Enter a command: ").strip().lower()
@@ -179,10 +223,13 @@ def main():
             continue
         parts = user_input.split()
         command, args = parts[0], parts[1:]
-
         if command in ["close", "exit"]:
             print("Good bye!")
             break
+        elif command == 'patterns':
+            print(show_patterns())
+        elif command == 'help':
+            print(get_help())
         elif command == "hello":
             print("How can I help you?")
         elif command == "add":
