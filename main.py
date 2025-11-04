@@ -38,7 +38,7 @@ class Record:
     def __init__(self, name):
         self.name = Name(name)
         self.phones = []
-        self.birthday = 1
+        self.birthday = None
     def add_birthday(self, date):
         date_indatetime = Birthday(date)
         if date_indatetime != None:
@@ -113,18 +113,18 @@ class AddressBook(UserDict):
                 delta_days = (birthday_this_year - today).days
                 if 0 <= delta_days <= 7:
                     congratulation_date = birthday_this_year
-                    if congratulation_date.weekday() == 5:      # суббота
+                    if congratulation_date.weekday() == 5:      
                         congratulation_date += timedelta(days=2)
-                    elif congratulation_date.weekday() == 6:    # воскресенье
+                    elif congratulation_date.weekday() == 6:    
                         congratulation_date += timedelta(days=1)
-                    bw1 = congratulation_date.weekday()
+                    bw1 = congratulation_date.weekday()+1
                     bw0 = ''
                     if bw1 == 1:
                         bw0 = 'Monday'
                     if bw1 == 2:
                         bw0 = 'Tuesday'
                     if bw1 == 3:
-                        bw0 == 'Wednesday'
+                        bw0 = 'Wednesday'
                     if bw1 == 4:
                         bw0 = 'Thursday'
                     if bw1 == 5:
@@ -138,16 +138,18 @@ class AddressBook(UserDict):
                         "congratulation_date": congratulation_date.strftime("%Y.%m.%d"),
                         "weekday": bw0
                     })
-        return upcoming_birthdays
-
+                    return upcoming_birthdays
+                else:
+                    return 'No birthdays next 7 days.'
 # Створення нової адресної книги
-book = AddressBook()
 
 # Створення запису для John
 john_record = Record("John")
 john_record.add_phone("1234567890")
 john_record.add_phone("5555555555")
-john_record.add_birthday('20.11.2025')
+john_record.add_birthday('05.11.2000')
+john_record.edit_phone('5555555555', '0987654321')
 # Додавання запису John до адресної книги
+book = AddressBook()
 book.add_record(john_record)
-print(book.find('John'))
+print(book.get_upcoming_birthdays())
