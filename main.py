@@ -89,9 +89,6 @@ class AddressBook(UserDict):
 
     def add_record(self, record):
         self.data[record.name.value] = record
-        #self.data[record.name] = record
-        self.get_upcoming_birthdays()
-        print(self.data)
 
     def find(self, name):
         return self.data.get(name)
@@ -153,3 +150,4 @@ john_record.edit_phone('5555555555', '0987654321')
 book = AddressBook()
 book.add_record(john_record)
 print(book.get_upcoming_birthdays())
+
