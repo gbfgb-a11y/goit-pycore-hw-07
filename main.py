@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 from collections import UserDict
 
-# Класси
 
+# Класси
 class Field:
     def __init__(self, value):
         self.value = value
@@ -37,7 +37,40 @@ class Record:
         self.birthday = None
 
     def add_phone(self, phone):
+        if isinstance(phone, Phone):
+            phone = phone.value
         self.phones.append(Phone(phone))
+
+    def remove_phone(self, phone):
+        if isinstance(phone, Phone):
+            phone = phone.value
+        isornot2 = self.find_phone(phone)
+        if isornot2 is not None:
+            self.phones.remove(isornot2)
+        else:
+            raise ValueError('Phone does not exist.')
+        
+
+    def edit_phone(self, old_phone, new_phone):
+        if isinstance(old_phone, Phone):
+            old_phonephone = old_phone.value
+        if isinstance(new_phone, Phone):
+            new_phonephone = new_phone.value
+        if new_phone and old_phone:
+            for i, a in enumerate(self.phones):
+                if a.value == old_phone:
+                    self.remove_phone(old_phone)
+                    self.add_phone(new_phone)
+        else:
+            raise ValueError('Phone does not anwer requirements.')
+    
+    def find_phone(self, phone):
+        if isinstance(phone, Phone):
+            phone = phone.value
+        for i in self.phones:
+            if i.value == phone:
+                return i
+        return None
 
     def add_birthday(self, date):
         self.birthday = Birthday(date)
@@ -55,12 +88,6 @@ class AddressBook(UserDict):
     def find(self, name):
         return self.data.get(name)
 
-    def get_record(self, name):
-        record = self.find(name)
-        if not record:
-            raise KeyError(f"Contact '{name}' not found")
-        return record
-
     def delete(self, name):
         if name in self.data:
             del self.data[name]
@@ -76,15 +103,18 @@ class AddressBook(UserDict):
                 days_left = (bday - today).days
                 if 0 <= days_left <= 7:
                     congrat_date = bday
-                    if congrat_date.weekday() == 5:  # Saturday
+                    if congrat_date.weekday() == 5:
                         congrat_date += timedelta(days=2)
-                    elif congrat_date.weekday() == 6:  # Sunday
+                    elif congrat_date.weekday() == 6:
                         congrat_date += timedelta(days=1)
+                    wd0 = congrat_date.strftime("%A")
                     upcoming.append({
                         "name": record.name.value,
-                        "congratulation_date": congrat_date.strftime("%Y-%m-%d")
+                        "congratulation_date": congrat_date.strftime("%Y-%m-%d"),
+                        "weekday": wd0
                     })
         return upcoming
+
 
 # Декоратор
 
@@ -102,107 +132,121 @@ def input_error(func):
             return f"Unexpected error: {e}"
     return inner
 
-# Хендлери
 
+def input_error_for_addphone(func):
+    def inner(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except (ValueError, IndexError, KeyError) as e:
+            return f"Error: To add contact write command acording to pattern 'add NAME PHONE'."
+    return inner
+
+# Обробники команд 
 @input_error
-def add_contact(args, book: AddressBook):
-    if len(args) < 2:
-        raise IndexError()
+def add_contact(args, book):
     name, phone = args
-    try:
-        record = book.get_record(name)
-        msg = "Contact updated."
-    except KeyError:
-        record = Record(name)
-        book.add_record(record)
-        msg = "Contact added."
+
+    record = book.find(name)
+    msg = "Contact updated."
+    record = Record(name)
+    book.add_record(record)
+    msg = "Contact added."
     record.add_phone(phone)
-    return msg
+    return [msg, record]
+
 
 @input_error
-def change(args, book: AddressBook):
-    if len(args) < 3:
-        raise IndexError()
+def change(args, book, Ro):
     name, old_phone, new_phone = args
-    record = book.get_record(name)
-    for i, ph in enumerate(record.phones):
-        if ph.value == old_phone:
-            record.phones[i] = Phone(new_phone)
+    record = book.find(name)
+    if record is None:
+        return "No such contact."
+    elif not Ro.find_phone(old_phone):
+        return "Old phone not found."
+    else:
+            Ro.edit_phone(old_phone, new_phone)
+            book.add_record(Ro)
             return "Phone changed."
-    return "Old phone not found."
+
 
 @input_error
-def show_phone(args, book: AddressBook):
+def show_phone(args, book):
     name = args[0]
-    record = book.get_record(name)
-    return f"{name}: {', '.join(str(p) for p in record.phones)}"
+    record = book.find(name)
+    if record:
+        return f"{name}: {', '.join(str(p) for p in record.phones)}"
+    return "Contact not found."
+
 
 @input_error
-def show_all(book: AddressBook):
+def show_all(book):
     if not book.data:
         return "No contacts yet."
     return "\n".join(str(r) for r in book.data.values())
 
+
 @input_error
-def add_birthday(args, book: AddressBook):
+def add_birthday(args, book):
     name, date = args
-    record = book.get_record(name)
-    record.add_birthday(date)
-    return f"Birthday added for {name}."
+    record = book.find(name)
+    if record:
+        record.add_birthday(date)
+        return f"Birthday added for {name}."
+    return "Contact not found."
+
 
 @input_error
-def show_birthday(args, book: AddressBook):
+def show_birthday(args, book):
     name = args[0]
-    record = book.get_record(name)
-    if not record.birthday:
+    record = book.find(name)
+    if record and record.birthday:
+        return f"{name}'s birthday: {record.birthday.value.strftime('%d.%m.%Y')}"
+    elif record:
         return "This contact has no birthday yet."
-    return f"{name}'s birthday: {record.birthday.value.strftime('%d.%m.%Y')}"
+    else:
+        return "Contact not found."
+
 
 @input_error
-def birthdays(_, book: AddressBook):
+def birthdays(_, book):
     upcoming = book.get_upcoming_birthdays()
     if not upcoming:
         return "No birthdays in the next 7 days."
-    lines = []
-    for b in upcoming:
-        congrat_date = datetime.strptime(b["congratulation_date"], "%Y-%m-%d").date()
-        weekday_name = congrat_date.strftime("%A")
-        lines.append(f"{b['name']}: {b['congratulation_date']}, weekday: {weekday_name}")
+    lines = [f"{b['name']}: {b['congratulation_date']}, weekday: {b['weekday']}" for b in upcoming]
     return "\n".join(lines)
-
+@input_error
 def get_help():
     return '''--------------------
-Available commands: 
+Avalible commands: 
 * help > to call this list.
 * hello > greetings.
-* add > to add phone to any contact or create a brand new contact.
+* add > to add phone to any contact or create a brandnew contact.
 * change > to change phone to any contact.
 * phone > to find contact name by phone numbers.
 * all > show whole list of contacts and phones
 * add-birthday > to add birthday date to any contact.
 * show-birthday > to find birthday by given contact
 * birthdays > to show all list of birthdays and combined names.
-* close/exit > to close the program. 
+* close/exit > to close the programm. 
 * patterns > shows the way how to call any command.
 --------------------'''
-
+@input_error
 def show_patterns():
     return '''--------------------
-add > 'add name phone'
-change > 'change name old_phone new_phone'
-phone > 'phone name'
-all > 'all'
-add-birthday > 'add-birthday name date'
-show-birthday > 'show-birthday name'
-birthdays > 'birthdays'
-close/exit > 'close'/'exit'
---------------------'''
-
+    add > 'add name phone'
+    change > 'change name old_phone new_phone'
+    phone > 'phone name'
+    all > 'all'
+    add-birthday > 'add-birthday name date'
+    show-birthday > 'show-birthday name'
+    birthdays > 'birthdays'
+    close/exit > 'close'/'exit'
+--------------------    '''
 # Головна частина
 
 def main():
     book = AddressBook()
-    print("Welcome to the assistant bot! Type command 'help' to see available commands.")
+    print("Welcome to the assistant bot! type command help to see avalible commands.")
 
     while True:
         user_input = input("Enter a command: ").strip().lower()
@@ -220,9 +264,14 @@ def main():
         elif command == "hello":
             print("How can I help you?")
         elif command == "add":
-            print(add_contact(args, book))
+            args=add_contact(args, book)
+            try:
+                mssg, Ro = args
+                print(mssg)
+            except Exception as e:
+                print('Error: something went wrong.')
         elif command == "change":
-            print(change(args, book))
+            print(change(args, book, Ro))
         elif command == "phone":
             print(show_phone(args, book))
         elif command == "all":
@@ -236,6 +285,6 @@ def main():
         else:
             print("Invalid command.")
 
+
 if __name__ == "__main__":
     main()
-
