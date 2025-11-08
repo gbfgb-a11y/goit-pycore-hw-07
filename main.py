@@ -50,17 +50,15 @@ class Record:
             raise ValueError("Phone does not exist.")
 
     def edit_phone(self, old_phone, new_phone):
-        if isinstance(old_phone, Phone):
-            old_phone = old_phone.value
-        if isinstance(new_phone, Phone):
-            new_phone = new_phone.value
-
         old = self.find_phone(old_phone)
-        if old:
-            self.remove_phone(old_phone)
-            self.add_phone(new_phone)
-        else:
+        if not old:
             raise ValueError("Old phone not found.")
+        try:
+            test_phone = Phone(new_phone)
+        except ValueError as e:
+            raise ValueError(f"Invalid new phone number: {e}")
+        old.value = new_phone
+
 
     def find_phone(self, phone):
         if isinstance(phone, Phone):
@@ -77,7 +75,6 @@ class Record:
         phones = "; ".join(str(p) for p in self.phones)
         bd = f", birthday: {self.birthday}" if self.birthday else ""
         return f"Contact name: {self.name}, phones: {phones}{bd}"
-
 
 class AddressBook(UserDict):
     def add_record(self, record):
@@ -307,4 +304,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
 
