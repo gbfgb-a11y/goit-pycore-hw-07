@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 from collections import UserDict
 
 
-# Класси
 class Field:
     def __init__(self, value):
         self.value = value
@@ -44,32 +43,31 @@ class Record:
     def remove_phone(self, phone):
         if isinstance(phone, Phone):
             phone = phone.value
-        isornot2 = self.find_phone(phone)
-        if isornot2 is not None:
-            self.phones.remove(isornot2)
+        found = self.find_phone(phone)
+        if found is not None:
+            self.phones.remove(found)
         else:
-            raise ValueError('Phone does not exist.')
-        
+            raise ValueError("Phone does not exist.")
 
     def edit_phone(self, old_phone, new_phone):
         if isinstance(old_phone, Phone):
-            old_phonephone = old_phone.value
+            old_phone = old_phone.value
         if isinstance(new_phone, Phone):
-            new_phonephone = new_phone.value
-        if new_phone and old_phone:
-            for i, a in enumerate(self.phones):
-                if a.value == old_phone:
-                    self.remove_phone(old_phone)
-                    self.add_phone(new_phone)
+            new_phone = new_phone.value
+
+        old = self.find_phone(old_phone)
+        if old:
+            self.remove_phone(old_phone)
+            self.add_phone(new_phone)
         else:
-            raise ValueError('Phone does not anwer requirements.')
-    
+            raise ValueError("Old phone not found.")
+
     def find_phone(self, phone):
         if isinstance(phone, Phone):
             phone = phone.value
-        for i in self.phones:
-            if i.value == phone:
-                return i
+        for p in self.phones:
+            if p.value == phone:
+                return p
         return None
 
     def add_birthday(self, date):
@@ -107,23 +105,18 @@ class AddressBook(UserDict):
                         congrat_date += timedelta(days=2)
                     elif congrat_date.weekday() == 6:
                         congrat_date += timedelta(days=1)
-                    wd0 = congrat_date.strftime("%A")
                     upcoming.append({
                         "name": record.name.value,
                         "congratulation_date": congrat_date.strftime("%Y-%m-%d"),
-                        "weekday": wd0
+                        "weekday": congrat_date.strftime("%A")
                     })
         return upcoming
 
-
-# Декоратор
 
 def input_error(func):
     def inner(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except IndexError:
-            return "Error: Not enough arguments provided."
         except ValueError as e:
             return f"Error: {e}"
         except KeyError as e:
@@ -133,30 +126,33 @@ def input_error(func):
     return inner
 
 
-def input_error_for_addphone(func):
-    def inner(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except (ValueError, IndexError, KeyError) as e:
-            return f"Error: To add contact write command acording to pattern 'add NAME PHONE'."
-    return inner
-
-# Обробники команд 
 @input_error
 def add_contact(args, book):
-    name, phone = args
+    if len(args) < 2:
+        return "You entered too few arguments for command 'add'. Pattern: add NAME PHONE"
+    elif len(args) > 2:
+        return "Too many arguments for command 'add'. Pattern: add NAME PHONE"
 
+    name, phone = args
     record = book.find(name)
-    msg = "Contact updated."
-    record = Record(name)
-    book.add_record(record)
-    msg = "Contact added."
-    record.add_phone(phone)
+    if record:
+        record.add_phone(phone)
+        msg = "Contact updated."
+    else:
+        record = Record(name)
+        record.add_phone(phone)
+        book.add_record(record)
+        msg = "Contact added."
     return [msg, record]
 
 
 @input_error
 def change(args, book, Ro):
+    if len(args) < 3:
+        return "You entered too few arguments for command 'change'. Pattern: change NAME OLD_PHONE NEW_PHONE"
+    elif len(args) > 3:
+        return "Too many arguments for command 'change'. Pattern: change NAME OLD_PHONE NEW_PHONE"
+
     name, old_phone, new_phone = args
     record = book.find(name)
     if record is None:
@@ -164,13 +160,18 @@ def change(args, book, Ro):
     elif not Ro.find_phone(old_phone):
         return "Old phone not found."
     else:
-            Ro.edit_phone(old_phone, new_phone)
-            book.add_record(Ro)
-            return "Phone changed."
+        Ro.edit_phone(old_phone, new_phone)
+        book.add_record(Ro)
+        return "Phone changed."
 
 
 @input_error
 def show_phone(args, book):
+    if len(args) < 1:
+        return "You entered too few arguments for command 'phone'. Pattern: phone NAME"
+    elif len(args) > 1:
+        return "Too many arguments for command 'phone'. Pattern: phone NAME"
+
     name = args[0]
     record = book.find(name)
     if record:
@@ -179,14 +180,12 @@ def show_phone(args, book):
 
 
 @input_error
-def show_all(book):
-    if not book.data:
-        return "No contacts yet."
-    return "\n".join(str(r) for r in book.data.values())
-
-
-@input_error
 def add_birthday(args, book):
+    if len(args) < 2:
+        return "You entered too few arguments for command 'add-birthday'. Pattern: add-birthday NAME DD.MM.YYYY"
+    elif len(args) > 2:
+        return "Too many arguments for command 'add-birthday'. Pattern: add-birthday NAME DD.MM.YYYY"
+
     name, date = args
     record = book.find(name)
     if record:
@@ -197,6 +196,11 @@ def add_birthday(args, book):
 
 @input_error
 def show_birthday(args, book):
+    if len(args) < 1:
+        return "You entered too few arguments for command 'show-birthday'. Pattern: show-birthday NAME"
+    elif len(args) > 1:
+        return "Too many arguments for command 'show-birthday'. Pattern: show-birthday NAME"
+
     name = args[0]
     record = book.find(name)
     if record and record.birthday:
@@ -214,64 +218,79 @@ def birthdays(_, book):
         return "No birthdays in the next 7 days."
     lines = [f"{b['name']}: {b['congratulation_date']}, weekday: {b['weekday']}" for b in upcoming]
     return "\n".join(lines)
+
+
 @input_error
+def show_all(book):
+    if not book.data:
+        return "No contacts yet."
+    return "\n".join(str(r) for r in book.data.values())
+
+
 def get_help():
     return '''--------------------
-Avalible commands: 
-* help > to call this list.
-* hello > greetings.
-* add > to add phone to any contact or create a brandnew contact.
-* change > to change phone to any contact.
-* phone > to find contact name by phone numbers.
-* all > show whole list of contacts and phones
-* add-birthday > to add birthday date to any contact.
-* show-birthday > to find birthday by given contact
-* birthdays > to show all list of birthdays and combined names.
-* close/exit > to close the programm. 
-* patterns > shows the way how to call any command.
+Available commands:
+* help > show this list
+* hello > greeting
+* add > add phone or create contact
+* change > change contact's phone
+* phone > show contact's phones
+* all > show all contacts
+* add-birthday > add birthday
+* show-birthday > show contact's birthday
+* birthdays > show upcoming birthdays
+* patterns > show usage patterns
+* close/exit > close the program
 --------------------'''
-@input_error
+
+
 def show_patterns():
     return '''--------------------
-    add > 'add name phone'
-    change > 'change name old_phone new_phone'
-    phone > 'phone name'
-    all > 'all'
-    add-birthday > 'add-birthday name date'
-    show-birthday > 'show-birthday name'
-    birthdays > 'birthdays'
-    close/exit > 'close'/'exit'
---------------------    '''
-# Головна частина
+add > 'add name phone'
+change > 'change name old_phone new_phone'
+phone > 'phone name'
+all > 'all'
+add-birthday > 'add-birthday name date'
+show-birthday > 'show-birthday name'
+birthdays > 'birthdays'
+close/exit > 'close'/'exit'
+--------------------'''
+
 
 def main():
     book = AddressBook()
-    print("Welcome to the assistant bot! type command help to see avalible commands.")
+    print("Welcome to the assistant bot! Type 'help' to see available commands.")
+
+    Ro = None
 
     while True:
-        user_input = input("Enter a command: ").strip().lower()
+        user_input = input("Enter a command: ").strip()
         if not user_input:
             continue
         parts = user_input.split()
-        command, args = parts[0], parts[1:]
+        command, args = parts[0].lower(), parts[1:]
+
         if command in ["close", "exit"]:
             print("Good bye!")
             break
-        elif command == 'patterns':
+        elif command == "patterns":
             print(show_patterns())
-        elif command == 'help':
+        elif command == "help":
             print(get_help())
         elif command == "hello":
             print("How can I help you?")
         elif command == "add":
-            args=add_contact(args, book)
-            try:
-                mssg, Ro = args
-                print(mssg)
-            except Exception as e:
-                print('Error: something went wrong.')
+            result = add_contact(args, book)
+            if isinstance(result, list):
+                msg, Ro = result
+                print(msg)
+            else:
+                print(result)
         elif command == "change":
-            print(change(args, book, Ro))
+            if Ro:
+                print(change(args, book, Ro))
+            else:
+                print("Error: No record in context. Use 'add' first.")
         elif command == "phone":
             print(show_phone(args, book))
         elif command == "all":
@@ -288,3 +307,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
